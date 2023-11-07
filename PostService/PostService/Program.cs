@@ -41,15 +41,22 @@ namespace PostService
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
                 Console.WriteLine(" [x] Received {0}", message);
+
                 var data = JObject.Parse(message);
                 var type = ea.RoutingKey;
                 if (type == "user.add")
                 {
+                    var userId = data["id"].Value<int>();
+                    var userName = data["name"].Value<string>();
+
+                    Console.WriteLine($"User added. ID: {userId}, Name: {userName}");
+
                     dbContext.User.Add(new User()
                     {
-                        ID = data["id"].Value<int>(),
-                        Name = data["name"].Value<string>()
+                        ID = userId,
+                        Name = userName
                     });
+
                     dbContext.SaveChanges();
                 }
                 else if (type == "user.update")
@@ -63,7 +70,6 @@ namespace PostService
                                      autoAck: true,
                                      consumer: consumer);
         }
-
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)

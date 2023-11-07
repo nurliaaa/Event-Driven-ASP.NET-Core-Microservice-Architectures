@@ -11,7 +11,7 @@ namespace PostService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PostController : Controller
+    public class PostController : ControllerBase
     {
         private readonly PostServiceContext _context;
 
@@ -29,10 +29,24 @@ namespace PostService.Controllers
         [HttpPost]
         public async Task<ActionResult<Post>> PostPost(Post post)
         {
+            var existingUser = await _context.User.FindAsync(post.UserId);
+
+            if (existingUser == null)
+            {
+                // Handle jika pengguna tidak ditemukan
+                return BadRequest("User not found");
+            }
+
+            post.User = existingUser; // Setel pengguna untuk posting
             _context.Post.Add(post);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetPost", new { id = post.PostId }, post);
+            // Muat ulang posting termasuk informasi pengguna
+            var postedWithUser = await _context.Post
+                .Include(x => x.User)
+                .FirstOrDefaultAsync(x => x.PostId == post.PostId);
+
+            return CreatedAtAction("GetPost", new { id = post.PostId }, postedWithUser);
         }
     }
 }
