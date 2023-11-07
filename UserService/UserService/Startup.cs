@@ -38,8 +38,8 @@ namespace UserService
             services.AddDbContext<Data.UserServiceContext>(options =>
                 options.UseSqlite(@"Data Source=user.db"));
 
-          //  services.AddSingleton<IntegrationEventSenderService>();
-          //  services.AddHostedService<IntegrationEventSenderService>(provider => provider.GetService<IntegrationEventSenderService>());
+            services.AddSingleton<IntegrationEventSenderService>();
+            services.AddHostedService<IntegrationEventSenderService>(provider => provider.GetService<IntegrationEventSenderService>());
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

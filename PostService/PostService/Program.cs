@@ -37,37 +37,47 @@ namespace PostService
                     .UseSqlite(@"Data Source=post.db")
                     .Options;
                 var dbContext = new PostServiceContext(contextOptions);
-
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
                 Console.WriteLine(" [x] Received {0}", message);
-
                 var data = JObject.Parse(message);
                 var type = ea.RoutingKey;
                 if (type == "user.add")
                 {
-                    var userId = data["id"].Value<int>();
-                    var userName = data["name"].Value<string>();
-
-                    Console.WriteLine($"User added. ID: {userId}, Name: {userName}");
-
-                    dbContext.User.Add(new User()
+                    if (dbContext.User.Any(a => a.ID == data["id"].Value<int>()))
                     {
-                        ID = userId,
-                        Name = userName
-                    });
-
-                    dbContext.SaveChanges();
+                        Console.WriteLine("Ignoring old/duplicate entity");
+                    }
+                    else
+                    {
+                        dbContext.User.Add(new User()
+                        {
+                            ID = data["id"].Value<int>(),
+                            Name = data["name"].Value<string>(),
+                            Version = data["version"].Value<int>()
+                        });
+                        dbContext.SaveChanges();
+                    }
                 }
                 else if (type == "user.update")
                 {
+                    int newVersion = data["version"].Value<int>();
                     var user = dbContext.User.First(a => a.ID == data["id"].Value<int>());
-                    user.Name = data["newname"].Value<string>();
-                    dbContext.SaveChanges();
+                    if (user.Version >= newVersion)
+                    {
+                        Console.WriteLine("Ignoring old/duplicate entity");
+                    }
+                    else
+                    {
+                        user.Name = data["newname"].Value<string>();
+                        user.Version = newVersion;
+                        dbContext.SaveChanges();
+                    }
                 }
+                channel.BasicAck(ea.DeliveryTag, false);
             };
             channel.BasicConsume(queue: "user.postservice",
-                                     autoAck: true,
+                                     autoAck: false,
                                      consumer: consumer);
         }
 
